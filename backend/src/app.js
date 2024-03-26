@@ -3,6 +3,7 @@ const app = require("express")();
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const imageRoutes = require("./routes/imageRoutes");
+const userRoutes = require("./routes/userRoutes");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
@@ -10,6 +11,7 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("Welcome to the image upload API!");
 });
+app.use("/users", userRoutes);
 app.use("/images", imageRoutes);
 
 const PORT = process.env.PORT || 5000;
