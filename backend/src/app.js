@@ -4,6 +4,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const imageRoutes = require("./routes/imageRoutes");
 const userRoutes = require("./routes/userRoutes");
+const serverless = require("serverless-http");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
@@ -20,4 +21,4 @@ app.listen(PORT, () => {
   console.log(`Server is listening at port:${PORT}`);
 });
 
-module.exports = app;
+module.exports.handler = serverless(app);
