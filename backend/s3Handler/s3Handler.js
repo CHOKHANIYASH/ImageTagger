@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { s3Client } = require("./aws/clients");
 const {
   getObject,
@@ -5,7 +6,6 @@ const {
   deleteObject,
 } = require("./s3Controllers");
 const sharp = require("sharp");
-
 const resizeHandler = async (event) => {
   const Bucket = event.Records[0].s3.bucket.name;
   const Key = event.Records[0].s3.object.key;
