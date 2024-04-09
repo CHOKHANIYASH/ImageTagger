@@ -1,12 +1,7 @@
 provider "aws" {
   region = "ap-south-1"
 }
-// Image resizer lambda
-data "archive_file" "lambda" {
-  type        = "zip"
-  source_dir  = "s3Handler"
-  output_path = "s3Handler.zip"
-}
+//lambda role and policy
 data "aws_iam_policy_document" "lambda_role_policy" {
   statement {
     effect = "Allow"
@@ -23,6 +18,34 @@ resource "aws_iam_role" "lambda_role" {
   name               = "lambda_role"
   assume_role_policy = data.aws_iam_policy_document.lambda_role_policy.json
 }
+//lambda role and policy ends
+
+// Image tagger lambda
+data "archive_file" "lambda" {
+  type        = "zip"
+  source_dir  = "imageTagger"
+  output_path = "imageTagger.zip"
+}
+
+resource "aws_lambda_function" "image_tagger_lambda" {
+  filename      = "src.zip"
+  function_name = "image_tagger_lambda"
+  handler       = "src.handler"
+  # source_code_hash = base64sha256(filebase64("s3Handler.zip"))
+  source_code_hash = filebase64sha256(data.archive_file.lambda.output_path)
+  role             = aws_iam_role.lambda_role.arn
+  runtime          = "nodejs20.x"
+}
+//Image tagger lambda ends
+
+// Image resizer lambda
+data "archive_file" "lambda" {
+  type        = "zip"
+  source_dir  = "s3Handler"
+  output_path = "s3Handler.zip"
+}
+
+
 resource "aws_lambda_function" "lambda_resizer" {
   filename      = "s3Handler.zip"
   function_name = "image_tagger_resizer"
@@ -31,13 +54,6 @@ resource "aws_lambda_function" "lambda_resizer" {
   source_code_hash = filebase64sha256(data.archive_file.lambda.output_path)
   role             = aws_iam_role.lambda_role.arn
   runtime          = "nodejs20.x"
-  # environment {
-  #   variables = {
-  #     S3_BUCKET_NAME               = aws_s3_bucket.image_tagger_bucket_resized.bucket
-  #     MY_APP_AWS_ACCESS_KEY        = var.MY_APP_AWS_ACCESS_KEY
-  #     MY_APP_AWS_SECRET_ACCESS_KEY = var.MY_APP_AWS_SECRET_ACCESS_KEY
-  #   }
-  # }
 }
 // Image resizer lambda ends
 
