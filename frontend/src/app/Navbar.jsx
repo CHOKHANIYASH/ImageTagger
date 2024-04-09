@@ -11,7 +11,7 @@ export default function Navbar({ className }) {
       className={cn("", className)}
     >
       <Menu setActive={setActive}>
-        <div className="md:hidden">
+        <div className="md:hidden z-10">
         <MenuItem  setActive={setActive} active={active} item="menu" image="vercel.svg">
           <div className="flex flex-col space-y-4 text-sm">
           <HoveredLink href="/dashboard">Dashboard</HoveredLink>

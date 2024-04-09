@@ -76,6 +76,7 @@ export const HoveredLink = ({ children,className, href }) => {
   return (
     <Link
       href={href}
+      onClick={() => setActive(null)}
       className={`${className}  text-neutral-700 hover:text-black `}
     >
       {children}
