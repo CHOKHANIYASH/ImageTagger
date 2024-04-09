@@ -1,49 +1,50 @@
+
 "use client";
 import Image from "next/image";
-import { Box, Center } from "@chakra-ui/react";
+import React from "react";
 import { useState } from "react";
-export default function Home() {
-  const [selectedFile, setSelectedFile] = useState(null);
+import { CardBody, CardContainer, CardItem } from "../components/ui/card";
+import Link from "next/link";
 
-  const handleImageChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-  };
-  const handleSubmit = (e) => {
-    e.preventDefault();
-  };
+export default function Home() {
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [isUploaded, setIsUploaded] = useState(false);
+    const handleImageChange = (e) => {
+      setSelectedFile(e.target.files[0]);
+    };
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      setIsUploaded(true);
+    };
   return (
     <>
-      <Center h="100vh">
-        <Box
-          className="bg-white shadow-xl shadow-gray-500 flex flex-col items-center justify-center font-bold text-xl text-blue-500"
-          w="50%"
-          h="200px"
-          rounded="md"
-        >
-          <form onSubmit={handleSubmit}>
-            <label htmlFor="imageUpload">
-              <Image
-                width="100"
-                height="100"
-                src="/upload.svg"
-                alt="Upload"
-                className="cursor-pointer pb-4"
-              />
-            </label>
-            <input
-              type="file"
-              id="imageUpload"
-              onChange={handleImageChange}
-              accept="image/*"
-              style={{ display: "none" }}
+    <form className='w-full flex justify-center items-center h-96 mt-20' onSubmit={handleSubmit}>
+    <CardContainer className="inter-var ml-5 w-1/2 h-2/3 ">
+      <CardBody className="bg-gray-50 relative group/card border-black/[0.1]  rounded-xl p-6 border w-full flex flex-col justify-center items-center">
+        <CardItem translateZ="100" className="mt-4">
+          <input
+            type="file"
+            id="imageUpload"
+            onChange={handleImageChange}
+            accept="*"
+            style={{ display: "none" }}
+          />
+          <label htmlFor="imageUpload">
+            <Image
+              src="/upload.svg"
+              height="100"
+              width="100"
+              className="object-cover cursor-pointer rounded-xl group-hover/card:shadow-xl"
+              alt="thumbnail"
             />
-            <div className="text-sm text-black">
-              {selectedFile && <p>Selected file: {selectedFile.name}</p>}
-            </div>
-            <button type="submit">Upload Image</button>
-          </form>
-        </Box>
-      </Center>
+          </label>
+        </CardItem>
+           <button className="px-4 py-2 mt-10 text-sm font-bold text-white bg-black rounded-xl" type='submit'> 
+              Upload
+           </button>
+      </CardBody>
+    </CardContainer>
+    </form>
     </>
   );
 }
