@@ -11,7 +11,7 @@ export default function History() {
     <>
     <div className='grid grid-cols-1 gap-4 m-6 md:grid-cols-4 md:gap-10 md:m-10'>
     {   history.map((item,i) => (
-    <CardContainer className="inter-var mt-10 ml-5">
+    <CardContainer key={i} className="inter-var mt-10 ml-5">
       <CardBody className="bg-gray-50 relative group/card border-black/[0.1]  rounded-xl p-6 border  ">
         <CardItem
           translateZ="50"
