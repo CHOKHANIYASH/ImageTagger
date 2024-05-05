@@ -12,7 +12,7 @@ const {
 } = require("@aws-sdk/client-dynamodb");
 const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
 const { cognitoClient, dynamodbClient } = require("../aws/clients");
-const { welcomeEmail } = require("./sesControllers");
+// const { welcomeEmail } = require("./sesControllers");
 // Add Users to the database
 const addUser = async ({ username }) => {
   console.log("addUser function");
@@ -32,11 +32,17 @@ const addUser = async ({ username }) => {
   };
 };
 // User Signup
-const signUp = async ({ username, password }) => {
+const signUp = async ({ username, password,email }) => {
   try {
     const command = new AdminCreateUserCommand({
       UserPoolId: process.env.COGNITO_USER_POOL_ID,
       Username: username,
+      UserAttributes: [
+        {
+          Name: "email",
+          Value: email,
+        },
+      ],
       MessageAction: "SUPPRESS",
     });
     const user = await cognitoClient.send(command);

@@ -4,12 +4,10 @@ const {
   login,
   getUser,
   getAllUsers,
-  subscribers,
-  subscribe,
 } = require("../controllers/userControllers");
-const { addBlog, getUserBlogs } = require("../controllers/blogsControllers");
-const { sendBlogEmail } = require("../controllers/sesControllers");
-const { isAdmin } = require("../middlewares/middlewares");
+// const { addBlog, getUserBlogs } = require("../controllers/blogsControllers");
+// const { sendBlogEmail } = require("../controllers/sesControllers");
+const { isAdmin } = require("../middleware/middlewares");
 
 router.get("/", isAdmin, async (req, res) => {
   try {
