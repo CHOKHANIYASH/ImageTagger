@@ -2,6 +2,7 @@ const {
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
   AdminInitiateAuthCommand,
+  AdminGetUserCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
 const { v4: uuidv4 } = require("uuid");
 const {
@@ -14,14 +15,15 @@ const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
 const { cognitoClient, dynamodbClient } = require("../aws/clients");
 // const { welcomeEmail } = require("./sesControllers");
 // Add Users to the database
-const addUser = async ({ username }) => {
+const addUser = async ({ username,email }) => {
   console.log("addUser function");
   userId = uuidv4();
   const command = new PutItemCommand({
-    TableName: "image_tagger_user",
+    TableName: "imageTagger",
     Item: {
       userId: { S: userId },
       username: { S: username },
+      email: { S: email },
     },
   });
   const response = await dynamodbClient.send(command);
@@ -34,6 +36,26 @@ const addUser = async ({ username }) => {
 // User Signup
 const signUp = async ({ username, password,email }) => {
   try {
+    const existsCommand = new AdminGetUserCommand({
+      UserPoolId: process.env.COGNITO_USER_POOL_ID,
+      Username: username,
+    });
+    const userExists = async()=>{ 
+      try{return await cognitoClient.send(existsCommand);}
+    catch(err){
+      console.log(err);
+      return false;
+    }}
+
+    const userExist = await userExists();
+    if(userExist){
+      return {
+        success: false,
+        message: "User already exists",
+        data: {},
+      };
+    }
+    // console.log("User does not exist");
     const command = new AdminCreateUserCommand({
       UserPoolId: process.env.COGNITO_USER_POOL_ID,
       Username: username,
@@ -45,7 +67,7 @@ const signUp = async ({ username, password,email }) => {
       ],
       MessageAction: "SUPPRESS",
     });
-    const user = await cognitoClient.send(command);
+    const user =  await cognitoClient.send(command);
     if (!user) {
       throw new Error("User not created");
     }
@@ -56,7 +78,7 @@ const signUp = async ({ username, password,email }) => {
       Permanent: true,
     });
     const passwordResponse = await cognitoClient.send(passwordCommand);
-    const userId = await addUser({ username });
+    const userId = await addUser({ username, email });
     return {
       success: true,
       message: "User created successfully",
@@ -65,6 +87,7 @@ const signUp = async ({ username, password,email }) => {
       },
     };
   } catch (err) {
+    // cleaning code if any error occurs during user creation to avoid any inconsistency to be added
     throw err;
   }
 };
@@ -98,7 +121,7 @@ const login = async ({ username, password }) => {
 const getAllUsers = async () => {
   try {
     const command = new ScanCommand({
-      TableName: "image_tagger_user",
+      TableName: "imageTagger",
     });
     const response = await dynamodbClient.send(command);
     const Items = response.Items;
@@ -115,7 +138,7 @@ const getAllUsers = async () => {
 const getUser = async ({ userId }) => {
   try {
     const command = new GetItemCommand({
-      TableName: "image_tagger_user",
+      TableName: "imageTagger",
       Key: marshall({ userId }),
     });
     const response = await dynamodbClient.send(command);
