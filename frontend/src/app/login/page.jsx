@@ -1,5 +1,8 @@
 "use client";
 import React from "react";
+import { useRouter } from 'next/navigation';
+import axios from "axios";
+import {useState} from 'react';
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../utils/cn";
@@ -8,9 +11,28 @@ import {
 } from "@tabler/icons-react";
 
 export default function Login() {
-  const handleSubmit = (e) => {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const url = process.env.NEXT_PUBLIC_SERVER_DEV_URL;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted");
+    try{
+      console.log("Form submitted");
+      const response = await axios.post( `${url}/users/login`, {username,password});
+      console.log(response);
+      setUsername("");
+      setPassword("");
+      // window.localStorage
+      localStorage.setItem("access_token",response.data.data.Authentication.AccessToken);
+      localStorage.setItem("refresh_token",response.data.data.Authentication.RefreshToken);
+      router.push("/");
+
+    }
+    catch(err){
+      console.log(err);
+    }
   };
   return (
     <div className="max-w-md p-4 m-10 mx-auto bg-white md:w-full max-md:m-5 rounded-2xl md:p-8 shadow-input">
@@ -19,12 +41,12 @@ export default function Login() {
       </h2>
       <form className="my-8" onSubmit={handleSubmit}>
         <LabelInputContainer className="mb-4">
-          <Label htmlFor="email">Email Address</Label>
-          <Input id="email" placeholder="projectmayhem@fc.com" type="email" />
+          <Label htmlFor="username">Username </Label>
+          <Input id="username" value={username} placeholder="user1" type="username" onChange={(e)=> setUsername(e.target.value)} />
         </LabelInputContainer>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" placeholder="••••••••" type="password" />
+          <Input value={password} id="password" placeholder="••••••••" type="password" onChange={(e)=> setPassword(e.target.value)} />
         </LabelInputContainer>
         <button
           className="bg-gradient-to-br relative group/btn from-black  to-neutral-600 block d w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset]"
@@ -36,7 +58,7 @@ export default function Login() {
 
         <div className="bg-gradient-to-r from-transparent via-neutral-300  to-transparent my-8 h-[1px] w-full" />
 
-        <div className="flex flex-col space-y-4">
+        {/* <div className="flex flex-col space-y-4">
           <button
             className="relative flex items-center justify-start w-full h-10 px-4 space-x-2 font-medium text-black rounded-md group/btn shadow-input bg-gray-50"
             type="submit"
@@ -47,7 +69,7 @@ export default function Login() {
             </span>
             <BottomGradient />
           </button>
-        </div>
+        </div> */}
       </form>
     </div>
   );

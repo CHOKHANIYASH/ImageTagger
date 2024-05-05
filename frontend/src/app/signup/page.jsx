@@ -1,5 +1,8 @@
 "use client";
 import React from "react";
+// import Link from "next/link";
+import { useRouter } from 'next/navigation';
+import {redirect} from 'next/navigation';
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../utils/cn";
@@ -12,32 +15,42 @@ import { ToastContainer, toast } from 'react-toastify';
 import {useState} from 'react';
 import axios from 'axios';
 export default function Signup() {
+  const router = useRouter();
   const [firstname, setFirstname] = useState("");
   const [lastname, setLastname] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const notify = () =>toast.success('🦄 Wow so easy!');
-  const handleSubmit = (e) => {
+  // console.log(process.env.NEXT_PUBLIC_SERVER_DEV_URL);
+  const url = process.env.NEXT_PUBLIC_SERVER_DEV_URL;
+  // const url = process.env.NEXT_PUBLIC_SERVER_PRODUCTION_URL;
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log(firstname,lastname,username,email,password);
     try{  
-      const response = axios.post(  'http://localhost:5000/users/signup', {firstname,lastname,username,email,password})
-      toast.success(response.data.message);
+      const response = await axios.post( `${url}/users/signup`, {firstname,lastname,username,email,password});
+      // const response = await axios.get( `${url}/images`);
+      console.log(response);
+      // toast.success(response.data.message);
+      setFirstname("");
+      setLastname("");
+      setUsername("");
+      setEmail("");
+      setPassword("");
+      console.log("Form submitted");
+      // redirect("/login")
+      router.push("/login");
+
+
     }
     catch(err){
-      toast.error(response.data.message);
+      // toast.error(response.data.message);
       console.log(err);
     }
 
-    console.log(response);
-    notify();
-    setFirstname("");
-    setLastname("");
-    setUsername("");
-    setEmail("");
-    setPassword("");
-    console.log("Form submitted");
+    // notify();
+   
   };
   return (
     <>
@@ -52,24 +65,24 @@ export default function Signup() {
         <div className="flex flex-col mb-4 space-y-2 md:flex-row md:space-y-0 md:space-x-2">
           <LabelInputContainer>
             <Label htmlFor="firstname">First name</Label>
-            <Input id="firstname" placeholder="Tyler" type="text" onChange={(e) => setFirstname(e.target.value)} />
+            <Input value={firstname} id="firstname" placeholder="Tyler" type="text" onChange={(e) => setFirstname(e.target.value)} />
           </LabelInputContainer>
           <LabelInputContainer>
             <Label htmlFor="lastname">Last name</Label>
-            <Input id="lastname" placeholder="Durden" type="text" onChange={(e) => setLastname(e.target.value)} />
+            <Input value={lastname} id="lastname" placeholder="Durden" type="text" onChange={(e) => setLastname(e.target.value)} />
           </LabelInputContainer>
         </div>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="username">username</Label>
-          <Input id="username" placeholder="user1" type="text" onChange={(e) => setUsername(e.target.value)} />
+          <Input value={username} id="username" placeholder="user1" type="text" onChange={(e) => setUsername(e.target.value)} />
         </LabelInputContainer>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="email">Email Address</Label>
-          <Input id="email" placeholder="projectmayhem@fc.com" type="email" onChange={(e) => setEmail(e.target.value)} />
+          <Input value={email} id="email" placeholder="projectmayhem@fc.com" type="email" onChange={(e) => setEmail(e.target.value)} />
         </LabelInputContainer>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" placeholder="••••••••" type="password" onChange={(e) => setPassword(e.target.value)} />
+          <Input value={password} id="password" placeholder="••••••••" type="password" onChange={(e) => setPassword(e.target.value)} />
         </LabelInputContainer>
         <button
           className="bg-gradient-to-br relative group/btn from-black  to-neutral-600 block d w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset]"
