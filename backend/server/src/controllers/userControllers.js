@@ -1,3 +1,4 @@
+const {createHmac} = require("crypto");
 const {
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
@@ -15,7 +16,7 @@ const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
 const { cognitoClient, dynamodbClient } = require("../aws/clients");
 // const { welcomeEmail } = require("./sesControllers");
 // Add Users to the database
-const addUser = async ({ username,email }) => {
+const addUser = async ({ username,email,firstname="",lastname="" }) => {
   console.log("addUser function");
   userId = uuidv4();
   const command = new PutItemCommand({
@@ -24,6 +25,8 @@ const addUser = async ({ username,email }) => {
       userId: { S: userId },
       username: { S: username },
       email: { S: email },
+      firstname: { S: firstname },
+      lastname: { S: lastname },
     },
   });
   const response = await dynamodbClient.send(command);
@@ -33,23 +36,27 @@ const addUser = async ({ username,email }) => {
     data: { userId },
   };
 };
-// User Signup
-const signUp = async ({ username, password,email }) => {
-  try {
+// User Signup  
+const signUp = async ({ username, password,email,firstname,lastname }) => {
+  try { 
+    console.log("signUp function");
+    console.log(username, password,email,firstname,lastname);
     const existsCommand = new AdminGetUserCommand({
       UserPoolId: process.env.COGNITO_USER_POOL_ID,
       Username: username,
+      email: email,
     });
     const userExists = async()=>{ 
       try{return await cognitoClient.send(existsCommand);}
     catch(err){
-      console.log(err);
+      // console.log(err);
       return false;
     }}
 
     const userExist = await userExists();
     if(userExist){
       return {
+        status: 400,
         success: false,
         message: "User already exists",
         data: {},
@@ -64,6 +71,10 @@ const signUp = async ({ username, password,email }) => {
           Name: "email",
           Value: email,
         },
+        {
+          Name: "email_verified",
+          Value: "true",
+        }
       ],
       MessageAction: "SUPPRESS",
     });
@@ -78,8 +89,9 @@ const signUp = async ({ username, password,email }) => {
       Permanent: true,
     });
     const passwordResponse = await cognitoClient.send(passwordCommand);
-    const userId = await addUser({ username, email });
+    const userId = await addUser({ username, email,firstname,lastname });
     return {
+      status: 201,
       success: true,
       message: "User created successfully",
       data: {
@@ -92,21 +104,26 @@ const signUp = async ({ username, password,email }) => {
   }
 };
 // User Login
-const login = async ({ username, password }) => {
+const login = async ({ username, password }) => { 
   try {
     const user_pool_id = process.env.COGNITO_USER_POOL_ID;
-    const client_id = process.env.COGNITO_USER_POOL_CLIENT_ID;
+    const clientId = process.env.COGNITO_USER_POOL_CLIENT_ID;
+    const clientSecret = process.env.COGNITO_USER_POOL_CLIENT_SECRET;
+    const secretHash = await generateSecretHash({username,clientId,clientSecret});
+    // console.log("secretHash",secretHash);
     const command = new AdminInitiateAuthCommand({
       AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
       UserPoolId: user_pool_id,
-      ClientId: client_id,
+      ClientId: clientId,
       AuthParameters: {
         USERNAME: username,
         PASSWORD: password,
-      },
+        SECRET_HASH: secretHash,
+      }, 
     });
     const response = await cognitoClient.send(command);
     return {
+      status: 200,
       success: true,
       message: "User logged in successfully",
       data: {
@@ -114,9 +131,26 @@ const login = async ({ username, password }) => {
       },
     };
   } catch (err) {
-    throw err;
+    console.log("Error in login function",err)
+    return {
+      status: 401,
+      success: false,
+      message: err.message,
+      data: {},
+    };
   }
 };
+
+// Generate Secret Hash
+const generateSecretHash = ({username,clientId,clientSecret}) =>{
+  // console.log("generateSecretHash function");
+  // console.log(username,clientId,clientSecret);  
+  const  str = username + clientId;
+  const secret = createHmac('sha256',clientSecret);
+  secret.update(str);
+  return secret.digest('base64');
+}
+//Generate a secret hash ends
 // Getting List of all Users
 const getAllUsers = async () => {
   try {

@@ -22,10 +22,10 @@ router.get("/", isAdmin, async (req, res) => {
 });
 
 router.post("/signup", async (req, res) => {
-  const { username, password, email } = req.body;
+  const { username, password, email,firstname,lastname } = req.body;
   try {
-    const response = await signUp({ username, password, email });
-    res.status(201).send(response); // 201 status code for resource created
+    const response = await signUp({ username, password, email ,lastname,firstname});
+    res.status(response.status).send(response); // 201 status code for resource created
   } catch (error) {
     console.error("Error in signUp:", error);
     res
@@ -38,7 +38,7 @@ router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     const response = await login({ username, password });
-    res.status(200).send(response); // 200 status code for success
+    res.status(response.status).send(response); // 200 status code for success
   } catch (err) {
     console.error("Error in login:", err);
     res

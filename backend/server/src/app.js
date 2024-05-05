@@ -7,7 +7,7 @@ const userRoutes = require("./routes/userRoutes");
 const serverless = require("serverless-http");
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({ origin: "*" }));
 
 app.get("/", (req, res) => {
   res.send("Welcome to the image upload API!");
