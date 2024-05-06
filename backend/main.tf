@@ -81,6 +81,23 @@ resource "aws_s3_bucket_notification" "bucket_notification" { // s3 bucket notif
   }
   depends_on = [aws_lambda_permission.allow_bucket]
 }
+resource "aws_s3_bucket_public_access_block" "image_tagger_bucket_resized_puclic_access" {
+  bucket = aws_s3_bucket.image_tagger_bucket_resized.bucket
+}
+resource "aws_s3_bucket_policy" "image_tagger_bucket_resized_policy" {
+  bucket = aws_s3_bucket.image_tagger_bucket_resized.bucket
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.image_tagger_bucket_resized.arn}/*"
+      }
+    ]
+  })
+}
 //s3 ends
 
 // CloudWatch Logs 
@@ -176,7 +193,7 @@ output "api_execution_arn" { // API Gateway execution ARN output
 
 // DynamoDB
 resource "aws_dynamodb_table" "image_tagger_table" {
-  name           = "ImageTagger"
+  name           = "imageTagger"
   billing_mode   = "PROVISIONED"
   read_capacity  = 2
   write_capacity = 2
