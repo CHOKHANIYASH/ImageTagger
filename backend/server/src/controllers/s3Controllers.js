@@ -10,18 +10,13 @@ const {
 const fs = require("fs");
 const { s3Client } = require("../aws/clients");
 const listObjects = async (Bucket) => {
-  try {
-    const command = new ListObjectsV2Command({
-      Bucket,
-      Prefix: process.env.S3_BUCKET_FOLDER,
-    });
-    const response = await client.send(command);
-    console.log(response);
-    return response;
-  } catch (error) {
-    console.log(error);
-    return error;
-  }
+  const command = new ListObjectsV2Command({
+    Bucket,
+    Prefix: process.env.S3_BUCKET_FOLDER,
+  });
+  const response = await s3Client.send(command);
+  console.log(response);
+  return response;
 };
 const getObject = async ({ Bucket, Key }) => {
   try {
@@ -51,28 +46,21 @@ const getBucketUrl = async (Bucket) => {
   const s3BucketUrl = `https://${bucketName}.s3.amazonaws.com`;
   return s3BucketUrl;
 };
-const getObjectUrl = async (Bucket, Key) => {
+const getObjectUrl = async ({ Bucket, Key }) => {
   const bucketName = Bucket;
   const s3ObjectUrl = `https://${bucketName}.s3.amazonaws.com/${Key}`;
   return s3ObjectUrl;
 };
-const putObject = async ({ Bucket, Key, Body, ContentType }) => {
-  try {
-    // const Body = fs.readFileSync(path);
-    const command = new PutObjectCommand({
-      Bucket,
-      Key,
-      Body,
-      ContentType,
-    });
-    const response = await s3Client.send(command);
-    const url = await getObjectUrl(Bucket, Key);
-    // fs.unlinkSync(path);
-    return { Key, url };
-  } catch (error) {
-    // fs.unlinkSync(path);
-    return error;
-  }
+const putObject = async ({ Bucket, Key, image, ContentType }) => {
+  const command = new PutObjectCommand({
+    Bucket,
+    Key,
+    Body: image,
+    ContentType,
+  });
+  const response = await s3Client.send(command);
+  const url = await getObjectUrl({ Bucket: process.env.S3_BUCKET_NAME, Key });
+  return { Key, url };
 };
 const deleteObject = async ({ Bucket, Key }) => {
   try {
