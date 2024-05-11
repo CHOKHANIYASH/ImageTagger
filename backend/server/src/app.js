@@ -17,6 +17,10 @@ app.use("/images", imageRoutes);
 
 const PORT = process.env.PORT || 5000;
 
+app.use((err,req, res, next) => {
+  res.status(err.status || 500).send({success:false,message:err.message,data:{}});  
+});
+
 app.listen(PORT, () => {
   console.log(`Server is listening at port:${PORT}`);
 });

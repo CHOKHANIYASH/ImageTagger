@@ -12,4 +12,16 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { upload, isAdmin };
+class AppError extends Error {
+  constructor(message, status) {
+    super();
+    this.status = status;
+    this.message = message;
+  }
+}
+
+const handleAsyncError = (fn) => (req, res, next) => {
+  fn(req, res, next).catch((err) => next(err));
+};
+
+module.exports = { upload, isAdmin, handleAsyncError, AppError };
