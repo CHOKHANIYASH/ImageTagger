@@ -1,14 +1,12 @@
 "use client";
 import React from "react";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import axios from "axios";
-import {useState} from 'react';
+import { useState } from "react";
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../utils/cn";
-import {
-  IconBrandGoogle,
-} from "@tabler/icons-react";
+import { IconBrandGoogle } from "@tabler/icons-react";
 
 export default function Login() {
   const router = useRouter();
@@ -18,35 +16,52 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try{
+    try {
       console.log("Form submitted");
-      const response = await axios.post( `${url}/users/login`, {username,password});
+      const response = await axios.post(`${url}/users/login`, {
+        username,
+        password,
+      });
       console.log(response);
       setUsername("");
       setPassword("");
       // window.localStorage
-      localStorage.setItem("access_token",response.data.data.Authentication.AccessToken);
-      localStorage.setItem("refresh_token",response.data.data.Authentication.RefreshToken);
+      localStorage.setItem(
+        "access_token",
+        response.data.data.Authentication.AccessToken
+      );
+      localStorage.setItem(
+        "refresh_token",
+        response.data.data.Authentication.RefreshToken
+      );
       router.push("/");
-
-    }
-    catch(err){
+    } catch (err) {
       console.log(err);
     }
   };
   return (
     <div className="max-w-md p-4 m-10 mx-auto bg-white md:w-full max-md:m-5 rounded-2xl md:p-8 shadow-input">
-      <h2 className="text-xl font-bold text-neutral-800">
-        Welcome 
-      </h2>
+      <h2 className="text-xl font-bold text-neutral-800">Welcome</h2>
       <form className="my-8" onSubmit={handleSubmit}>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="username">Username </Label>
-          <Input id="username" value={username} placeholder="user1" type="username" onChange={(e)=> setUsername(e.target.value)} />
+          <Input
+            id="username"
+            value={username}
+            placeholder="user1"
+            type="username"
+            onChange={(e) => setUsername(e.target.value)}
+          />
         </LabelInputContainer>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="password">Password</Label>
-          <Input value={password} id="password" placeholder="••••••••" type="password" onChange={(e)=> setPassword(e.target.value)} />
+          <Input
+            value={password}
+            id="password"
+            placeholder="••••••••"
+            type="password"
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </LabelInputContainer>
         <button
           className="bg-gradient-to-br relative group/btn from-black  to-neutral-600 block d w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset]"
@@ -84,10 +99,7 @@ const BottomGradient = () => {
   );
 };
 
-const LabelInputContainer = ({
-  children,
-  className,
-}) => {
+const LabelInputContainer = ({ children, className }) => {
   return (
     <div className={cn("flex flex-col space-y-2 w-full", className)}>
       {children}
