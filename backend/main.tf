@@ -2,7 +2,7 @@ provider "aws" {
   region = "ap-south-1"
 }
 //lambda role and policy
-data "aws_iam_policy_document" "lambda_role_policy" {
+data "aws_iam_policy_document" "lambda_role_policy" { // lambda role policy creation
   statement {
     effect = "Allow"
 
@@ -14,7 +14,7 @@ data "aws_iam_policy_document" "lambda_role_policy" {
     actions = ["sts:AssumeRole"]
   }
 }
-resource "aws_iam_role" "lambda_role" { // lambda role creation
+resource "aws_iam_role" "lambda_role" { // lambda role creation (common role for all lambdas)
   name               = "lambda_role"
   assume_role_policy = data.aws_iam_policy_document.lambda_role_policy.json
 }
@@ -39,29 +39,86 @@ resource "aws_lambda_function" "image_tagger_lambda" { // lambda ImageTagger cre
 //Image tagger lambda ends
 
 // Image resizer lambda
-data "archive_file" "lambda_resizer" { // lambda zip creation
+data "archive_file" "resizer_lambda" { // lambda zip creation
   type        = "zip"
   source_dir  = "s3Handler"
   output_path = "s3Handler.zip"
 }
 
-
-resource "aws_lambda_function" "lambda_resizer" { // lambda resizer creation
+resource "aws_lambda_function" "resizer_lambda" { // lambda resizer creation
   filename      = "s3Handler.zip"
   function_name = "image_tagger_resizer"
   handler       = "s3Handler.handler"
   # source_code_hash = base64sha256(filebase64("s3Handler.zip"))
-  source_code_hash = filebase64sha256(data.archive_file.lambda_resizer.output_path)
+  source_code_hash = filebase64sha256(data.archive_file.resizer_lambda.output_path)
   role             = aws_iam_role.lambda_role.arn
   runtime          = "nodejs20.x"
 }
 // Image resizer lambda ends
 
+// DB lambda
+resource "aws_iam_role" "dynamodb_stream_role" {
+  name = "dynamodb_stream_role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+resource "aws_iam_policy" "dynamodb_stream_policy" {
+  name = "dynamodb_stream_policy"
+  description = "IAM policy for lambda to read from DynamoDB stream"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:GetRecords",
+          "dynamodb:GetShardIterator",
+          "dynamodb:DescribeStream",
+          "dynamodb:ListStreams"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+resource "aws_iam_role_policy_attachment" "dynamodb_stream" {
+  role = aws_iam_role.dynamodb_stream_role.name
+  policy_arn = aws_iam_policy.dynamodb_stream_policy.arn
+}
+
+data "archive_file" "db_lambda" { // lambda zip creation
+  type        = "zip"
+  source_dir  = "dynamodbHandler"
+  output_path = "dynamodbHandler.zip"
+}
+
+resource "aws_lambda_function" "db_lambda" { // db lambda creation
+  filename      = "dynamodbHandler.zip"
+  function_name = "db_lambda"
+  handler       = "dynamodbHandler.handler"
+  # source_code_hash = base64sha256(filebase64("s3Handler.zip"))
+  source_code_hash = filebase64sha256(data.archive_file.db_lambda.output_path)
+  role             = aws_iam_role.dynamodb_stream_role.arn
+  # role             = aws_iam_role.dynamodb_stream_role.arn
+  runtime          = "nodejs20.x"
+}
+// DB lambda ends 
+
 // s3 
 resource "aws_lambda_permission" "allow_bucket" {
   statement_id  = "AllowExecutionFromS3Bucket"                     // A unique identifier for this permission statement
   action        = "lambda:InvokeFunction"                          // The action that is being granted (invoke the Lambda function)
-  function_name = aws_lambda_function.lambda_resizer.function_name // The ARN of the Lambda function
+  function_name = aws_lambda_function.resizer_lambda.function_name // The ARN of the Lambda function
   principal     = "s3.amazonaws.com"                               // The AWS service that is granted permission (S3)
   source_arn    = aws_s3_bucket.image_tagger_bucket.arn            // The ARN of the S3 bucket
 }
@@ -76,7 +133,7 @@ resource "aws_s3_bucket" "image_tagger_bucket_resized" { // s3 bucket creation
 resource "aws_s3_bucket_notification" "bucket_notification" { // s3 bucket notification to lambda
   bucket = aws_s3_bucket.image_tagger_bucket.bucket
   lambda_function {
-    lambda_function_arn = aws_lambda_function.lambda_resizer.arn
+    lambda_function_arn = aws_lambda_function.resizer_lambda.arn
     events              = ["s3:ObjectCreated:*"]
   }
   depends_on = [aws_lambda_permission.allow_bucket]
@@ -102,11 +159,15 @@ resource "aws_s3_bucket_policy" "image_tagger_bucket_resized_policy" {
 
 // CloudWatch Logs 
 resource "aws_cloudwatch_log_group" "lambda_log_group" { // CloudWatch log group creation for image resizer lambda
-  name              = "/aws/lambda/${aws_lambda_function.lambda_resizer.function_name}"
+  name              = "/aws/lambda/${aws_lambda_function.resizer_lambda.function_name}"
   retention_in_days = 14
 }
 resource "aws_cloudwatch_log_group" "lambda_log_group_image_tagger" { // CloudWatch log group creation for image resizer lambda
   name              = "/aws/lambda/${aws_lambda_function.image_tagger_lambda.function_name}"
+  retention_in_days = 14
+}
+resource "aws_cloudwatch_log_group" "lambda_log_group_db_lambda" { // CloudWatch log group creation for image resizer lambda
+  name              = "/aws/lambda/${aws_lambda_function.db_lambda.function_name}"
   retention_in_days = 14
 }
 data "aws_iam_policy_document" "lambda_logs_policy" { // IAM policy for lambda to write logs to CloudWatch data
@@ -129,6 +190,10 @@ resource "aws_iam_policy" "lambda_logs_policy" { // IAM policy for lambda to wri
 
 resource "aws_iam_role_policy_attachment" "lambda_logs" { // IAM role policy attachment for lambda to write logs to CloudWatch
   role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_logs_policy.arn
+}
+resource "aws_iam_role_policy_attachment" "lambda_logs2" { // IAM role policy attachment for lambda to write logs to CloudWatch
+  role       = aws_iam_role.dynamodb_stream_role.name
   policy_arn = aws_iam_policy.lambda_logs_policy.arn
 }
 // End of CloudWatch Logs
@@ -203,6 +268,8 @@ resource "aws_dynamodb_table" "image_tagger_table" {
     name = "userId"
     type = "S"
   }
+  stream_enabled = true
+  stream_view_type = "NEW_IMAGE"
   # attribute {
   #   name = "firstName"
   #   type = "S"
@@ -225,3 +292,19 @@ resource "aws_dynamodb_table" "image_tagger_table" {
   # }
 }
 // DynamoDB ends
+
+resource "aws_lambda_event_source_mapping" "db_lambda_source_mapping" {
+  event_source_arn = aws_dynamodb_table.image_tagger_table.stream_arn // DynamoDB table ARN
+  # function_name = aws_lambda_function.db_lambda.function_name // Lambda function name
+  function_name = aws_lambda_function.db_lambda.arn
+  batch_size = 200  // The maximum number of records in each batch
+  starting_position = "LATEST"  // The position in the stream where the AWS Lambda function should start reading
+  maximum_retry_attempts = 2  // The maximum number of times to retry when the function returns an error
+} 
+resource "aws_lambda_permission" "db_lambda_permission" {
+  statement_id = "AllowExeecutionFromDynamodb"
+  action = "lambda:invokeFunction"
+  function_name = aws_lambda_function.db_lambda.function_name
+  principal = "dynamodb.amazonaws.com"
+  source_arn = aws_dynamodb_table.image_tagger_table.arn
+}
