@@ -27,9 +27,12 @@ const handleAsyncError = (fn) => (req, res, next) => {
 };
 
 const isValidUser = handleAsyncError(async (req, res, next) => {
-  console.log(req.headers);
+  // console.log(req.headers);
   const { userId } = req.params;
   const access_token = req.headers.access_token;
+  if (!access_token) {
+    throw new AppError("Unauthorized", 401);
+  }
   const decoded = jwt.decode(access_token, { complete: true });
   const { sub } = decoded.payload;
   const USERID = sub;

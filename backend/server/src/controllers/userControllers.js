@@ -5,6 +5,7 @@ const {
   AdminInitiateAuthCommand,
   AdminGetUserCommand,
 } = require("@aws-sdk/client-cognito-identity-provider");
+const util = require("util");
 const { v4: uuidv4 } = require("uuid");
 const {
   ScanCommand,
@@ -14,11 +15,20 @@ const {
 } = require("@aws-sdk/client-dynamodb");
 const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
 const { cognitoClient, dynamodbClient } = require("../aws/clients");
+const { response } = require("express");
+const { AppError } = require("../middleware/middlewares");
+const { access } = require("fs");
 // const { welcomeEmail } = require("./sesControllers");
 // Add Users to the database
-const addUser = async ({ username, email, firstname = "", lastname = "" }) => {
+const addUser = async ({
+  username,
+  email,
+  firstname = "",
+  lastname = "",
+  userId,
+}) => {
   console.log("addUser function");
-  userId = uuidv4();
+  // console.log(username, email, firstname, lastname, userId);
   const command = new PutItemCommand({
     TableName: "imageTagger",
     Item: {
@@ -27,125 +37,112 @@ const addUser = async ({ username, email, firstname = "", lastname = "" }) => {
       email: { S: email },
       firstname: { S: firstname },
       lastname: { S: lastname },
-      url: { L: [] },
+      imageUrl: { L: [] },
     },
   });
   const response = await dynamodbClient.send(command);
-  console.log(response);
+  // console.log(response);
   return {
     message: "User added successfully",
     data: { userId },
   };
 };
+const checkPasswordPolicy = (password) => {
+  return true;
+};
 // User Signup
 const signUp = async ({ username, password, email, firstname, lastname }) => {
-  try {
-    console.log("signUp function");
-    console.log(username, password, email, firstname, lastname);
-    const existsCommand = new AdminGetUserCommand({
-      UserPoolId: process.env.COGNITO_USER_POOL_ID,
-      Username: username,
-      email: email,
-    });
-    const userExists = async () => {
-      try {
-        return await cognitoClient.send(existsCommand);
-      } catch (err) {
-        // console.log(err);
-        return false;
-      }
-    };
+  // try {
+  console.log("signUp function");
+  const validPassword = checkPasswordPolicy(password);
+  if (!validPassword) {
+    throw new AppError("Password does not meet the policy", 400);
+  }
+  // console.log(username, password, email, firstname, lastname);
+  const command = new AdminCreateUserCommand({
+    UserPoolId: process.env.COGNITO_USER_POOL_ID,
+    Username: username,
+    UserAttributes: [
+      {
+        Name: "email",
+        Value: email,
+      },
+      {
+        Name: "email_verified",
+        Value: "true",
+      },
+    ],
+    MessageAction: "SUPPRESS",
+  });
 
-    const userExist = await userExists();
-    if (userExist) {
-      return {
-        status: 400,
-        success: false,
-        message: "User already exists",
-        data: {},
-      };
-    }
-    // console.log("User does not exist");
-    const command = new AdminCreateUserCommand({
-      UserPoolId: process.env.COGNITO_USER_POOL_ID,
-      Username: username,
-      UserAttributes: [
-        {
-          Name: "email",
-          Value: email,
-        },
-        {
-          Name: "email_verified",
-          Value: "true",
-        },
-      ],
-      MessageAction: "SUPPRESS",
+  const user = await cognitoClient.send(command).catch((err) => {
+    throw new AppError(err.message, 400);
+  });
+  // console.log(util.inspect(user, false, null, true /* enable colors */));
+  const userId = user.User.Attributes[2].Value;
+  // console.log(userId);
+  if (!user) {
+    throw new Error("User not created");
+  }
+  const passwordCommand = new AdminSetUserPasswordCommand({
+    UserPoolId: process.env.COGNITO_USER_POOL_ID,
+    Username: username,
+    Password: password,
+    Permanent: true,
+  });
+  const passwordResponse = await cognitoClient
+    .send(passwordCommand)
+    .catch((err) => {
+      throw new AppError(err.message, 400);
     });
-    const user = await cognitoClient.send(command);
-    if (!user) {
-      throw new Error("User not created");
-    }
-    const passwordCommand = new AdminSetUserPasswordCommand({
-      UserPoolId: process.env.COGNITO_USER_POOL_ID,
-      Username: username,
-      Password: password,
-      Permanent: true,
-    });
-    const passwordResponse = await cognitoClient.send(passwordCommand);
-    const userId = await addUser({ username, email, firstname, lastname });
-    return {
-      status: 201,
+  await addUser({ username, email, firstname, lastname, userId });
+  return {
+    status: 201,
+    response: {
       success: true,
       message: "User created successfully",
       data: {
         userId,
       },
-    };
-  } catch (err) {
-    // cleaning code if any error occurs during user creation to avoid any inconsistency to be added
-    throw err;
-  }
+    },
+  };
+  // } catch (err) {
+  //   throw new AppError("User not created", 400);
+  //   console.log(err);
+  // }
 };
 // User Login
 const login = async ({ username, password }) => {
-  try {
-    const user_pool_id = process.env.COGNITO_USER_POOL_ID;
-    const clientId = process.env.COGNITO_USER_POOL_CLIENT_ID;
-    const clientSecret = process.env.COGNITO_USER_POOL_CLIENT_SECRET;
-    const secretHash = await generateSecretHash({
-      username,
-      clientId,
-      clientSecret,
-    });
-    // console.log("secretHash",secretHash);
-    const command = new AdminInitiateAuthCommand({
-      AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
-      UserPoolId: user_pool_id,
-      ClientId: clientId,
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: password,
-        SECRET_HASH: secretHash,
-      },
-    });
-    const response = await cognitoClient.send(command);
-    return {
-      status: 200,
-      success: true,
-      message: "User logged in successfully",
-      data: {
-        Authentication: response.AuthenticationResult,
-      },
-    };
-  } catch (err) {
-    console.log("Error in login function", err);
-    return {
-      status: 401,
-      success: false,
-      message: err.message,
-      data: {},
-    };
-  }
+  const user_pool_id = process.env.COGNITO_USER_POOL_ID;
+  const clientId = process.env.COGNITO_USER_POOL_CLIENT_ID;
+  const clientSecret = process.env.COGNITO_USER_POOL_CLIENT_SECRET;
+  const secretHash = await generateSecretHash({
+    username,
+    clientId,
+    clientSecret,
+  });
+  // console.log("secretHash",secretHash);
+  const command = new AdminInitiateAuthCommand({
+    AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
+    UserPoolId: user_pool_id,
+    ClientId: clientId,
+    AuthParameters: {
+      USERNAME: username,
+      PASSWORD: password,
+      SECRET_HASH: secretHash,
+    },
+  });
+  const response = await cognitoClient.send(command).catch((err) => {
+    throw new AppError(err.message, 401);
+  });
+  return {
+    status: 200,
+    success: true,
+    message: "User logged in successfully",
+    data: {
+      Authentication: response.AuthenticationResult,
+    },
+  };
 };
 
 // Generate Secret Hash
@@ -177,34 +174,51 @@ const getAllUsers = async () => {
 };
 // get user details
 const getUser = async ({ userId }) => {
-  try {
-    const command = new GetItemCommand({
-      TableName: "imageTagger",
-      Key: marshall({ userId }),
-    });
-    const response = await dynamodbClient.send(command);
-    if (!response.Item) {
-      return {
-        success: false,
-        message: "User not found",
-        data: {},
-      };
-    }
-    const user = unmarshall(response.Item);
-    return {
+  const key = marshall({ userId });
+  const command = new GetItemCommand({
+    TableName: "imageTagger",
+    Key: key,
+  });
+  const response = await dynamodbClient.send(command);
+  if (!response.Item) {
+    throw new AppError("User not found", 404);
+  }
+  const user = unmarshall(response.Item);
+  return {
+    status: 200,
+    response: {
       success: true,
       message: "User found",
       data: { user },
-    };
-  } catch (err) {
-    throw err;
+    },
+  };
+};
+const getUserImageUrls = async ({ userId }) => {
+  const key = marshall({ userId });
+  const command = new GetItemCommand({
+    TableName: "imageTagger",
+    Key: key,
+  });
+  const response = await dynamodbClient.send(command);
+  if (!response.Item) {
+    throw new AppError("User not found", 404);
   }
+  const user = unmarshall(response.Item);
+  return {
+    status: 200,
+    response: {
+      success: true,
+      message: "User found",
+      data: { imageUrls: user.imageUrl },
+    },
+  };
 };
 
 const addImageUrl = async ({ userId, imageUrl }) => {
+  const key = marshall({ userId });
   const command = new UpdateItemCommand({
     TableName: "imageTagger",
-    Key: marshall({ userId }),
+    Key: key,
     UpdateExpression: "SET imageUrl = list_append(imageUrl,:imageUrl)",
     ExpressionAttributeValues: {
       ":imageUrl": { L: [{ S: `${imageUrl}` }] },
@@ -221,10 +235,47 @@ const addImageUrl = async ({ userId, imageUrl }) => {
     },
   };
 };
+
+const getAccessToken = async ({ refreshToken, username }) => {
+  const user_pool_id = process.env.COGNITO_USER_POOL_ID;
+  const clientId = process.env.COGNITO_USER_POOL_CLIENT_ID;
+  const clientSecret = process.env.COGNITO_USER_POOL_CLIENT_SECRET;
+  const secretHash = generateSecretHash({
+    username,
+    clientId,
+    clientSecret,
+  });
+  console.log("secretHash", secretHash);
+  const command = new AdminInitiateAuthCommand({
+    AuthFlow: "REFRESH_TOKEN_AUTH",
+    UserPoolId: user_pool_id,
+    ClientId: clientId,
+    AuthParameters: {
+      REFRESH_TOKEN: refreshToken,
+      SECRET_HASH: secretHash,
+    },
+  });
+  const response = await cognitoClient.send(command).catch((err) => {
+    throw new AppError(err.message, 401);
+  });
+  return {
+    status: 200,
+    response: {
+      success: true,
+      message: "Access Token Generated Successfully",
+      data: {
+        AccessToken: response.AuthenticationResult.AccessToken,
+      },
+    },
+  };
+};
+
 module.exports = {
   signUp,
   login,
   getUser,
+  getUserImageUrls,
   getAllUsers,
   addImageUrl,
+  getAccessToken,
 };
