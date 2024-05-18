@@ -1,8 +1,14 @@
 const router = require("express").Router();
-const { upload, handleAsyncError } = require("../middleware/middlewares");
+const {
+  upload,
+  handleAsyncError,
+  isValidUser,
+  AppError,
+} = require("../middleware/middlewares");
 const { detectLabels } = require("../controllers/rekognitionControllers");
 const s3Controllers = require("../controllers/s3Controllers");
 const userControllers = require("../controllers/userControllers");
+const util = require("util");
 router.get("/", (req, res) => {
   res.send("Welcome");
 });
@@ -20,25 +26,23 @@ router.get("/", (req, res) => {
 //   }
 // });
 router.get(
-  "/labels",
+  "/labels/:image",
   handleAsyncError(async (req, res) => {
     // throw new Error();
-    const image = req.query.image;
-    console.log(image);
-    const response = await detectLabels({ image });
-    res.status(response.status).send(response.response);
+    const image = req.params.image;
+    console.log(util.inspect(image, false, null, true /* enable colors */));
+    const { response, status } = await detectLabels({ image });
+    res.status(status).send(response);
   })
 );
 
 router.post(
   "/upload/:userId",
+  isValidUser,
   upload.array("images"),
   handleAsyncError(async (req, res) => {
     const userId = req.params.userId;
-    if (!req.files)
-      res
-        .status(400)
-        .send({ success: false, message: "Invalid Input", data: {} });
+    if (!req.files) throw new AppError("Invalid Input", 400);
     // console.log(req.files);
     const image = req.files[0];
     const imageBuffer = image.buffer;
@@ -62,7 +66,6 @@ router.post(
       imageUrl: url,
     });
     res.status(userResponse.status).send(userResponse.response);
-    // res.send("giuerbghu3jrg");
   })
 );
 
