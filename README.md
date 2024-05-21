@@ -7,6 +7,7 @@ An Image tagging webapp using AWS Rekognition
 # Frontend
 
 - Nextjs
+- Redux
 - Tailwind CSS
 
 # Backend
@@ -26,3 +27,7 @@ An Image tagging webapp using AWS Rekognition
 # Infrastructure as a Code
 
 - Terraform
+
+# ImageTagger Backend Design
+
+![Plot](/ImageTaggerDesign.png)
