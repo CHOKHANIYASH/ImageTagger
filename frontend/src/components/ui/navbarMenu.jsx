@@ -13,20 +13,14 @@ const transition = {
   restSpeed: 0.001,
 };
 
-export const MenuItem = ({
-  setActive,
-  active,
-  item,
-  image,
-  children,
-}) => {
+export const MenuItem = ({ setActive, active, item, image, children }) => {
   return (
     <div onMouseEnter={() => setActive(item)} className="relative ">
       <motion.p
         transition={{ duration: 0.3 }}
         className="cursor-pointer text-black hover:opacity-[0.9]"
       >
-        <Image src={image} width={50} height={50} alt={item} />
+        <Image src="/vercel.svg" width={20} height={20} alt={item} />
       </motion.p>
       {active !== null && (
         <motion.div
@@ -56,10 +50,7 @@ export const MenuItem = ({
   );
 };
 
-export const Menu = ({
-  setActive,
-  children,
-}) => {
+export const Menu = ({ setActive, children }) => {
   return (
     <nav
       onMouseLeave={() => setActive(null)} // resets the state
@@ -70,15 +61,16 @@ export const Menu = ({
   );
 };
 
-
-
-export const HoveredLink = ({ children,className, href }) => {
+export const HoveredLink = ({ setActive, children, className, href }) => {
   return (
     <Link
       href={href}
+      // passHref
+      // prefetch={false} // prevents pre-fetching
       onClick={() => setActive(null)}
       className={`${className}  text-neutral-700 hover:text-black `}
     >
+      {/* // <a href={href}> {children}</a> */}
       {children}
     </Link>
   );

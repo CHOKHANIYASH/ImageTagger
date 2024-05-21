@@ -1,8 +1,6 @@
 "use client";
 import React from "react";
-// import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { redirect } from "next/navigation";
 import { Label } from "../../components/ui/label";
 import { Input } from "../../components/ui/input";
 import { cn } from "../../utils/cn";
@@ -11,9 +9,17 @@ import {
   IconBrandGoogle,
   IconBrandOnlyfans,
 } from "@tabler/icons-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { useState } from "react";
 import axios from "axios";
+import Loader from "react-js-loader";
+import jwt from "jsonwebtoken";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks/index";
+import { setAccessToken } from "@/redux/slices/accessTokenSlice";
+import { setIsAuthenticated } from "@/redux/slices/isAuthenticatedSlice";
+import { setUserId } from "@/redux/slices/userIdSlice";
+import { setRefreshToken } from "@/redux/slices/refreshTokenSlice";
+
 export default function Signup() {
   const router = useRouter();
   const [firstname, setFirstname] = useState("");
@@ -21,13 +27,11 @@ export default function Signup() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const notify = () => toast.success("🦄 Wow so easy!");
-  // console.log(process.env.NEXT_PUBLIC_SERVER_DEV_URL);
+  const [loading, setLoading] = useState(false);
+  const dispatch = useAppDispatch();
   const url = process.env.NEXT_PUBLIC_SERVER_DEV_URL;
-  // const url = process.env.NEXT_PUBLIC_SERVER_PRODUCTION_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(firstname, lastname, username, email, password);
     try {
       const response = await axios.post(`${url}/users/signup`, {
         firstname,
@@ -36,19 +40,27 @@ export default function Signup() {
         email,
         password,
       });
-      // const response = await axios.get( `${url}/images`);
-      console.log(response);
-      // toast.success(response.data.message);
       setFirstname("");
       setLastname("");
       setUsername("");
       setEmail("");
       setPassword("");
       console.log("Form submitted");
-      // redirect("/login")
+      // const tokenDecoded = jwt.decode(
+      //   response.data.data.Authentication.AccessToken,
+      //   { complete: true }
+      // );
+      // const userId = tokenDecoded.payload.sub;
+      // dispatch(setAccessToken(response.data.data.Authentication.AccessToken));
+      // dispatch(setRefreshToken(response.data.data.Authentication.RefreshToken));
+      // dispatch(setIsAuthenticated(true));
+      // dispatch(setUserId(userId));
+      setLoading(false);
+      toast.success("Signup successful", { toastId: "uniqueToastSignup" });
       router.push("/login");
     } catch (err) {
-      // toast.error(response.data.message);
+      toast.error(err.response.data.message, { toastId: "uniqueToastSignup" });
+      setLoading(false);
       console.log(err);
     }
 
@@ -56,9 +68,6 @@ export default function Signup() {
   };
   return (
     <>
-      <div className="w-full h-20 flex items-center justify-center">
-        <ToastContainer autoClose={3000} />
-      </div>
       <div className="max-w-md p-4 m-10 mx-auto bg-white md:w-full max-md:m-5 rounded-2xl md:p-8 shadow-input">
         <h2 className="text-xl font-bold text-neutral-800">Welcome</h2>
         <form className="my-8" onSubmit={handleSubmit}>
@@ -114,13 +123,17 @@ export default function Signup() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </LabelInputContainer>
-          <button
-            className="bg-gradient-to-br relative group/btn from-black  to-neutral-600 block d w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset]"
-            type="submit"
-          >
-            Sign up &rarr;
-            <BottomGradient />
-          </button>
+          {!loading ? (
+            <button
+              className="bg-gradient-to-br relative group/btn from-black  to-neutral-600 block d w-full text-white rounded-md h-10 font-medium shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset]"
+              type="submit"
+            >
+              Sign up &rarr;
+              <BottomGradient />
+            </button>
+          ) : (
+            <Loader type="spinner-circle" bgColor={"#000000"} size={50} />
+          )}
 
           <div className="bg-gradient-to-r from-transparent via-neutral-300  to-transparent my-8 h-[1px] w-full" />
 
