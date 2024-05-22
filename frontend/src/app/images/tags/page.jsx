@@ -6,13 +6,13 @@ import { CardBody, CardContainer, CardItem } from "../../../components/ui/card";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { useAppSelector } from "@/redux/hooks/index";
-import { headers } from "next/headers";
+// import { headers } from "next/headers";
 export default function Tag() {
   const searchParams = useSearchParams();
   const imageUrl = searchParams.get("imageUrl");
   const image = imageUrl.split("/").pop();
   const [tags, setTags] = useState([]);
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const accessToken = useAppSelector((state) => state.accessToken);
   useEffect(() => {
     axios
       .get(`${process.env.NEXT_PUBLIC_SERVER_DEV_URL}/images/labels/${image}`, {
