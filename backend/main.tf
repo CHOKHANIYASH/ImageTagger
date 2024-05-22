@@ -202,6 +202,62 @@ resource "aws_iam_role_policy_attachment" "lambda_logs2" { // IAM role policy at
 resource "aws_api_gateway_rest_api" "image_tagger_api" { // API Gateway creation
   name = "image_tagger_api"
 }
+
+resource "aws_api_gateway_authorizer" "image_tagger_authorizer"{
+  name="image_tagger_authorizer"
+  type = "COGNITO_USER_POOLS"
+  rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
+  provider_arns = ["arn:aws:cognito-idp:ap-south-1:225542105072:userpool/ap-south-1_7vEMSVs4X"]
+  identity_source = "method.request.header.access_token"
+}
+// login resource
+resource "aws_api_gateway_resource" "image_tagger_login_resource" { // API Gateway resource creation
+  rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
+  parent_id   = aws_api_gateway_rest_api.image_tagger_api.root_resource_id
+  path_part   = "login"
+}
+
+resource "aws_api_gateway_method" "image_tagger_login_method" { // API Gateway method creation
+  rest_api_id   = aws_api_gateway_rest_api.image_tagger_api.id
+  resource_id   = aws_api_gateway_resource.image_tagger_login_resource.id
+  http_method   = "POST"
+  authorization =   "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_integration_login" { // API Gateway integration with lambda
+  rest_api_id             = aws_api_gateway_rest_api.image_tagger_api.id
+  resource_id             = aws_api_gateway_resource.image_tagger_login_resource.id
+  http_method             = aws_api_gateway_method.image_tagger_login_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.image_tagger_lambda.invoke_arn
+  content_handling        = "CONVERT_TO_TEXT" # Add this line
+}
+// signup resource
+resource "aws_api_gateway_resource" "image_tagger_signup_resource" { // API Gateway resource creation
+  rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
+  parent_id   = aws_api_gateway_rest_api.image_tagger_api.root_resource_id
+  path_part   = "signup"
+}
+
+resource "aws_api_gateway_method" "image_tagger_signup_method" { // API Gateway method creation
+  rest_api_id   = aws_api_gateway_rest_api.image_tagger_api.id
+  resource_id   = aws_api_gateway_resource.image_tagger_signup_resource.id
+  http_method   = "POST"
+  authorization =   "NONE"
+}
+
+resource "aws_api_gateway_integration" "lambda_integration_signup" { // API Gateway integration with lambda
+  rest_api_id             = aws_api_gateway_rest_api.image_tagger_api.id
+  resource_id             = aws_api_gateway_resource.image_tagger_signup_resource.id
+  http_method             = aws_api_gateway_method.image_tagger_signup_method.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.image_tagger_lambda.invoke_arn
+  content_handling        = "CONVERT_TO_TEXT" # Add this line
+}
+
+
 resource "aws_api_gateway_resource" "image_tagger_resource" { // API Gateway resource creation
   rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
   parent_id   = aws_api_gateway_rest_api.image_tagger_api.root_resource_id
@@ -212,7 +268,9 @@ resource "aws_api_gateway_method" "image_tagger_method" { // API Gateway method 
   rest_api_id   = aws_api_gateway_rest_api.image_tagger_api.id
   resource_id   = aws_api_gateway_resource.image_tagger_resource.id
   http_method   = "ANY"
-  authorization = "NONE"
+  authorization =   "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.image_tagger_authorizer.id
+  authorization_scopes = ["aws.cognito.signin.user.admin"]
   request_parameters = {
     "method.request.path.proxy" = true
   }
@@ -250,9 +308,6 @@ resource "aws_api_gateway_deployment" "image_tagger_deployment" { // API Gateway
 }
 output "api_url" { // API Gateway URL output
   value = aws_api_gateway_deployment.image_tagger_deployment.invoke_url
-}
-output "api_execution_arn" { // API Gateway execution ARN output
-  value = aws_api_gateway_rest_api.image_tagger_api.execution_arn
 }
 // API Gateway ends
 
