@@ -200,7 +200,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs2" { // IAM role policy at
 
 // API Gateway
 resource "aws_api_gateway_rest_api" "image_tagger_api" { // API Gateway creation
-  name = "image_tagger_api"
+  name = "image_tagger_api_new"
 }
 
 resource "aws_api_gateway_authorizer" "image_tagger_authorizer"{
@@ -210,10 +210,16 @@ resource "aws_api_gateway_authorizer" "image_tagger_authorizer"{
   provider_arns = ["arn:aws:cognito-idp:ap-south-1:225542105072:userpool/ap-south-1_7vEMSVs4X"]
   identity_source = "method.request.header.access_token"
 }
+// Users resource
+resource "aws_api_gateway_resource" "image_tagger_user_resource" { // API Gateway resource creation
+  rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
+  parent_id   = aws_api_gateway_rest_api.image_tagger_api.root_resource_id
+  path_part   = "users"
+}
 // login resource
 resource "aws_api_gateway_resource" "image_tagger_login_resource" { // API Gateway resource creation
   rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
-  parent_id   = aws_api_gateway_rest_api.image_tagger_api.root_resource_id
+  parent_id   = aws_api_gateway_resource.image_tagger_user_resource.id
   path_part   = "login"
 }
 
@@ -236,7 +242,7 @@ resource "aws_api_gateway_integration" "lambda_integration_login" { // API Gatew
 // signup resource
 resource "aws_api_gateway_resource" "image_tagger_signup_resource" { // API Gateway resource creation
   rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
-  parent_id   = aws_api_gateway_rest_api.image_tagger_api.root_resource_id
+  parent_id   = aws_api_gateway_resource.image_tagger_user_resource.id
   path_part   = "signup"
 }
 
@@ -262,6 +268,10 @@ resource "aws_api_gateway_resource" "image_tagger_resource" { // API Gateway res
   rest_api_id = aws_api_gateway_rest_api.image_tagger_api.id
   parent_id   = aws_api_gateway_rest_api.image_tagger_api.root_resource_id
   path_part   = "{proxy+}"
+  depends_on = [
+    aws_api_gateway_resource.image_tagger_login_resource,
+    aws_api_gateway_resource.image_tagger_signup_resource
+  ]
 }
 
 resource "aws_api_gateway_method" "image_tagger_method" { // API Gateway method creation
