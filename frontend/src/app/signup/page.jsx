@@ -32,6 +32,7 @@ export default function Signup() {
   const url = process.env.NEXT_PUBLIC_SERVER_DEV_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await axios.post(`${url}/users/signup`, {
         firstname,
