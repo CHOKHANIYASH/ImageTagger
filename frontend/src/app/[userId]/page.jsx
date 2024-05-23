@@ -32,6 +32,7 @@ function Home() {
   const handleSubmit = async (e) => {
     try {
       e.preventDefault();
+      console.log(selectedFile);
       if (selectedFile === null) {
         const file = { name: "Please select a file first" };
         setSelectedFile(file);
@@ -53,7 +54,7 @@ function Home() {
           if (check) {
             break;
           } else {
-            if (i === 2) {
+            if (i === 4) {
               throw new Error("Image not uploaded");
             } else {
               await new Promise((resolve) => setTimeout(resolve, 2000));

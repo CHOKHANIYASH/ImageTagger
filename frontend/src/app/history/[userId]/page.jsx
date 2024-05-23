@@ -33,6 +33,9 @@ function History() {
       .then((response) => {
         setHistory(response.data.data.imageUrls);
         console.log(response);
+      })
+      .catch((err) => {
+        console.log(err);
       });
   }, []);
   const imageUrl =

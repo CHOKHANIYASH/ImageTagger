@@ -22,6 +22,9 @@ export default function Tag() {
       })
       .then((response) => {
         setTags(response.data.data);
+      })
+      .catch((err) => {
+        console.log(err);
       });
   }, []);
   return (
@@ -35,9 +38,9 @@ export default function Tag() {
           alt="thumbnail"
         />
         <div className="flex flex-col items-center">
-          <ul className="list-disc">
-            {tags &&
-              tags.map((item, i) => (
+          {tags.length !== 0 ? (
+            <ul className="list-disc">
+              {tags.map((item, i) => (
                 <li
                   key={i}
                   className="p-2 font-bold text-white test-md md:text-lg"
@@ -47,7 +50,12 @@ export default function Tag() {
                   {item.Confidence} %
                 </li>
               ))}
-          </ul>
+            </ul>
+          ) : (
+            <h1 className="text-2xl font-bold text-neutral-800">
+              No Tags Available
+            </h1>
+          )}
         </div>
       </div>
     </>
