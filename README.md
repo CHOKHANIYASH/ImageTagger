@@ -34,4 +34,6 @@ An Image tagging webapp using AWS Rekognition
 
 ### [Application/Frontend Link](https://image-tagger-sigma.vercel.app/)
 
+![Plot](/imagetest2.png)
+
 ### [Backend Link](https://zrir9zmi23.execute-api.ap-south-1.amazonaws.com/prod)
