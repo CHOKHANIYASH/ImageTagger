@@ -10,7 +10,7 @@ export default function Welcome() {
   const userId = useAppSelector((state) => state.userId);
   useEffect(() => {
     if (!isAuthenticated) {
-      toast.error("Pls login first", { toastId: "uniqueToast" });
+      toast.info("login first", { toastId: "uniqueToast" });
       router.push("/login");
     } else {
       router.push(`/${userId}`);

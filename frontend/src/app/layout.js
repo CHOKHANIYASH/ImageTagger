@@ -16,7 +16,7 @@ export default function RootLayout({ children }) {
       <body className={`${inter.className} bg-cyan-600`}>
         <ReduxProvider>
           <Navbar />
-          <ToastContainer />
+          <ToastContainer autoClose={2000} />
           {children}
         </ReduxProvider>
       </body>
